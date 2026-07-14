@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { DatabaseSync } = require('node:sqlite');
@@ -15,7 +16,17 @@ if (major < 22 || (major === 22 && minor < 5)) {
   process.exit(1);
 }
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'store.sqlite');
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'store.sqlite');
+
+// Make sure the folder the database file lives in actually exists. On a
+// fresh clone/upload, an empty `data/` folder often doesn't get included
+// (git/most upload tools don't track empty folders), which would otherwise
+// crash the app on startup with "unable to open database file".
+const dbDir = path.dirname(DB_PATH);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
 const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL');
 db.exec('PRAGMA foreign_keys = ON');
